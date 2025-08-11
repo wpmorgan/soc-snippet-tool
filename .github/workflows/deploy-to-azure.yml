@@ -1,4 +1,4 @@
-name: Deploy to Azure Storage
+name: Deploy to Azure
 
 on:
   push:
@@ -8,15 +8,38 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      - name: Upload to Azure Storage
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            az storage blob upload-batch \
-              --connection-string ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }} \
-              --destination '$web' \
-              --source '.'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # --- FRONTEND BUILD ---
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install frontend dependencies
+      working-directory: frontend
+      run: npm ci
+
+    - name: Build frontend
+      working-directory: frontend
+      run: npm run build
+
+    # --- UPLOAD FRONTEND TO AZURE STORAGE ---
+    - name: Upload to Azure Storage
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+          az storage blob upload-batch \
+            --account-name ${{ secrets.AZURE_STORAGE_ACCOUNT }} \
+            --account-key ${{ secrets.AZURE_STORAGE_KEY }} \
+            --destination '$web' \
+            --source frontend/build
+
+    # --- BACKEND DEPLOY PLACEHOLDER ---
+    # We'll set this up later once your backend is ready
+    # - name: Deploy backend to Azure App Service
+    #   run: echo "Backend deployment step goes here"
+
