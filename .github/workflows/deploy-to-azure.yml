@@ -1,4 +1,4 @@
-name: Deploy to Azure
+name: Build and Deploy Frontend & Backend
 
 on:
   push:
@@ -10,36 +10,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      # Checkout code
+      - name: 'Checkout code'
+        uses: actions/checkout@v3
 
-    # --- FRONTEND BUILD ---
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      # Login to Azure
+      - name: 'Login to Azure'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Install frontend dependencies
-      working-directory: frontend
-      run: npm ci
+      #########################
+      # FRONTEND BUILD & DEPLOY
+      #########################
+      - name: 'Install frontend dependencies'
+        working-directory: ./frontend
+        run: npm ci
 
-    - name: Build frontend
-      working-directory: frontend
-      run: npm run build
+      - name: 'Build frontend'
+        working-directory: ./frontend
+        run: npm run build
 
-    # --- UPLOAD FRONTEND TO AZURE STORAGE ---
-    - name: Upload to Azure Storage
-      uses: azure/CLI@v1
-      with:
-        inlineScript: |
+      - name: 'Upload frontend to Azure Storage'
+        run: |
           az storage blob upload-batch \
             --account-name ${{ secrets.AZURE_STORAGE_ACCOUNT }} \
             --account-key ${{ secrets.AZURE_STORAGE_KEY }} \
             --destination '$web' \
-            --source frontend/build
+            --source ./frontend/dist
 
-    # --- BACKEND DEPLOY PLACEHOLDER ---
-    # We'll set this up later once your backend is ready
-    # - name: Deploy backend to Azure App Service
-    #   run: echo "Backend deployment step goes here"
+      #########################
+      # BACKEND BUILD & DEPLOY
+      #########################
+      - name: 'Install backend dependencies'
+        working-directory: ./backend
+        run: npm ci
+
+      - name: 'Deploy backend to Azure Web App'
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: '<your-backend-webapp-name>'
+          package: './backend'
+
 
